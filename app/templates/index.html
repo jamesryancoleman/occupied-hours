@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Space Scheduler</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background-color: #f8fafc;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        header {
+            margin-bottom: 2rem;
+            display: flex;
+            align-items: baseline;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        h1 {
+            color: #1f2937;
+            font-size: 2rem;
+            font-weight: 700;
+        }
+
+        .space-select {
+            background: white;
+            border: 2px solid #e5e7eb;
+            border-radius: 6px;
+            color: #1f2937;
+            font-family: inherit;
+            font-size: 1rem;
+            padding: 0.5rem 0.75rem;
+            min-width: 250px;
+            outline: none;
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+
+        .space-select:focus {
+            border-color: #2563eb;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+
+        .space-select:disabled {
+            background: #f3f4f6;
+            color: #9ca3af;
+            cursor: not-allowed;
+        }
+
+        .grid-wrapper {
+            overflow: auto;
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 1rem;
+            height: calc(100vh - 220px);
+        }
+
+        .calendar {
+            display: grid;
+            grid-template-columns: 50px repeat(7, 1fr);
+            grid-auto-rows: 1fr;
+            gap: 0;
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            overflow: hidden;
+            min-width: 600px;
+            height: 100%;
+        }
+
+        .cell {
+            background: white;
+            padding: 0;
+            font-size: 0.75rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 0;
+        }
+
+        .header-cell {
+            background: #f8fafc;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-size: 0.7rem;
+            color: #4b5563;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            min-height: 24px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .time-cell {
+            background: #f8fafc;
+            color: #6b7280;
+            font-size: 0.65rem;
+            font-weight: 500;
+            position: sticky;
+            left: 0;
+            z-index: 5;
+            border-right: 1px solid #e5e7eb;
+        }
+
+        .time-cell.hour-label {
+            border-top: 1px solid #d1d5db;
+        }
+
+        .slot {
+            cursor: pointer;
+            transition: all 0.15s ease;
+            user-select: none;
+        }
+
+        .slot.hour-start {
+            border-top: 1px solid #e5e7eb;
+        }
+
+        .slot:hover {
+            background: #e0f2fe;
+        }
+
+        .slot.selected {
+            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+            color: white;
+        }
+
+        .slot.selecting {
+            background: #bfdbfe;
+        }
+
+        .actions {
+            margin-top: 2rem;
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            align-items: flex-start;
+        }
+
+        button {
+            font-family: inherit;
+            font-size: 0.875rem;
+            font-weight: 600;
+            padding: 0.625rem 1.25rem;
+            border: 2px solid #e5e7eb;
+            background: white;
+            color: #374151;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        button:hover {
+            border-color: #2563eb;
+            color: #2563eb;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(37, 99, 235, 0.15);
+        }
+
+        button:focus {
+            outline: 2px solid #3b82f6;
+            outline-offset: 2px;
+        }
+
+        button.primary {
+            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+            border-color: #2563eb;
+            color: white;
+        }
+
+        button.primary:hover {
+            background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
+            border-color: #1d4ed8;
+            box-shadow: 0 4px 8px rgba(37, 99, 235, 0.3);
+        }
+
+        .output-section {
+            margin-top: 2rem;
+        }
+
+        .output-label {
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #6b7280;
+            margin-bottom: 0.5rem;
+        }
+
+        .output {
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 1rem;
+            font-size: 0.875rem;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            line-height: 1.6;
+            max-height: 300px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-break: break-all;
+            color: #4b5563;
+            display: none;
+        }
+
+        .output.visible {
+            display: block;
+        }
+
+        .stats {
+            font-size: 0.875rem;
+            color: #6b7280;
+            margin-left: auto;
+            display: flex;
+            gap: 1.5rem;
+        }
+
+        .stat-value {
+            color: #2563eb;
+            font-weight: 600;
+        }
+
+        /* Focus indicators for accessibility */
+        *:focus {
+            outline: 2px solid #3b82f6;
+            outline-offset: 2px;
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 1rem;
+            }
+
+            h1 {
+                font-size: 1.5rem;
+            }
+
+            .stats {
+                width: 100%;
+                margin-top: 1rem;
+            }
+
+            .space-input {
+                width: 100%;
+            }
+        }
+
+        @media print {
+            .slot.selected {
+                background: #2563eb !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Space Scheduler</h1>
+            <select class="space-select" id="spaceName">
+                <option value="">Loading locations...</option>
+            </select>
+            <div class="stats">
+                <span>Selected: <span class="stat-value" id="selectedCount">0</span> hours</span>
+            </div>
+        </header>
+
+        <div class="grid-wrapper">
+            <div class="calendar" id="calendar">
+                <div class="cell header-cell"></div>
+                {% for day in days %}
+                <div class="cell header-cell">{{ day[:3] }}</div>
+                {% endfor %}
+
+                {% for hour in hours %}
+                <div class="cell time-cell hour-label" style="grid-row: span 4;">{{ '%02d' % hour }}:00</div>
+                {% for day in days %}
+                <div class="cell slot hour-start" data-day="{{ day }}" data-hour="{{ hour }}" data-minute="0"></div>
+                {% endfor %}
+
+                {% for day in days %}
+                <div class="cell slot" data-day="{{ day }}" data-hour="{{ hour }}" data-minute="15"></div>
+                {% endfor %}
+
+                {% for day in days %}
+                <div class="cell slot" data-day="{{ day }}" data-hour="{{ hour }}" data-minute="30"></div>
+                {% endfor %}
+
+                {% for day in days %}
+                <div class="cell slot" data-day="{{ day }}" data-hour="{{ hour }}" data-minute="45"></div>
+                {% endfor %}
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="actions">
+            <button class="primary" id="submitBtn">Submit Schedule</button>
+            <button id="clearBtn">Clear All</button>
+            <button id="copyBtn" style="display: none;">Copy to Clipboard</button>
+        </div>
+
+        <div class="output-section">
+            <div class="output-label">iCalendar Output (saved to Redis)</div>
+            <pre class="output" id="output"></pre>
+        </div>
+    </div>
+
+    <script>
+        const calendar = document.getElementById('calendar');
+        const output = document.getElementById('output');
+        const selectedCount = document.getElementById('selectedCount');
+        const submitBtn = document.getElementById('submitBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        const copyBtn = document.getElementById('copyBtn');
+        const spaceName = document.getElementById('spaceName');
+
+        let isSelecting = false;
+        let selectionMode = null;
+        let lastX = null;
+        let lastY = null;
+
+        const slots = document.querySelectorAll('.slot');
+
+        function getCellAtPoint(x, y) {
+            const el = document.elementFromPoint(x, y);
+            return el?.closest('.slot');
+        }
+
+        function applyToCell(cell) {
+            if (!cell) return;
+            const isSelected = cell.classList.contains('selected');
+            if (selectionMode === 'add' && !isSelected) {
+                cell.classList.add('selected');
+            } else if (selectionMode === 'remove' && isSelected) {
+                cell.classList.remove('selected');
+            }
+        }
+
+        function interpolateCells(x1, y1, x2, y2) {
+            // Bresenham-style interpolation to hit all cells between two points
+            const dx = Math.abs(x2 - x1);
+            const dy = Math.abs(y2 - y1);
+            const steps = Math.max(dx, dy, 1);
+            
+            for (let i = 0; i <= steps; i++) {
+                const t = steps === 0 ? 0 : i / steps;
+                const x = Math.round(x1 + (x2 - x1) * t);
+                const y = Math.round(y1 + (y2 - y1) * t);
+                const cell = getCellAtPoint(x, y);
+                applyToCell(cell);
+            }
+        }
+
+        function handleStart(e) {
+            e.preventDefault();
+            const cell = e.target.closest('.slot');
+            if (!cell) return;
+
+            isSelecting = true;
+            selectionMode = cell.classList.contains('selected') ? 'remove' : 'add';
+            
+            const point = e.touches ? e.touches[0] : e;
+            lastX = point.clientX;
+            lastY = point.clientY;
+            
+            // Toggle the first cell directly
+            cell.classList.toggle('selected');
+            updateCount();
+        }
+
+        function handleMove(e) {
+            if (!isSelecting) return;
+            e.preventDefault();
+
+            const point = e.touches ? e.touches[0] : e;
+            const currentX = point.clientX;
+            const currentY = point.clientY;
+
+            if (lastX !== null && lastY !== null) {
+                interpolateCells(lastX, lastY, currentX, currentY);
+            }
+
+            lastX = currentX;
+            lastY = currentY;
+            updateCount();
+        }
+
+        function handleEnd() {
+            isSelecting = false;
+            selectionMode = null;
+            lastX = null;
+            lastY = null;
+        }
+
+        function toggleCell(cell) {
+            cell.classList.toggle('selected');
+            updateCount();
+        }
+
+        calendar.addEventListener('mousedown', handleStart);
+        calendar.addEventListener('mousemove', handleMove);
+        document.addEventListener('mouseup', handleEnd);
+
+        calendar.addEventListener('touchstart', handleStart, { passive: false });
+        calendar.addEventListener('touchmove', handleMove, { passive: false });
+        document.addEventListener('touchend', handleEnd);
+
+        function updateCount() {
+            const count = document.querySelectorAll('.slot.selected').length;
+            const hours = (count * 15 / 60).toFixed(1);
+            selectedCount.textContent = hours;
+        }
+
+        function getSelections() {
+            const selections = {};
+            const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+            
+            days.forEach(day => {
+                selections[day] = [];
+            });
+
+            document.querySelectorAll('.slot.selected').forEach(slot => {
+                const day = slot.dataset.day;
+                const hour = parseInt(slot.dataset.hour);
+                const minute = parseInt(slot.dataset.minute);
+                selections[day].push({ hour, minute });
+            });
+
+            return selections;
+        }
+
+        submitBtn.addEventListener('click', async () => {
+            const selections = getSelections();
+            const name = spaceName.value || 'Space';
+
+            try {
+                const response = await fetch('/submit', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        space_name: name,
+                        selections: selections
+                    })
+                });
+
+                const data = await response.json();
+                output.textContent = `Saved to Redis key: ${data.redis_key}\n\n${data.ical}`;
+                output.classList.add('visible');
+                copyBtn.style.display = 'inline-block';
+            } catch (err) {
+                console.error('Error submitting schedule:', err);
+                output.textContent = 'Error saving schedule';
+                output.classList.add('visible');
+            }
+        });
+
+        clearBtn.addEventListener('click', () => {
+            document.querySelectorAll('.slot.selected').forEach(slot => {
+                slot.classList.remove('selected');
+            });
+            updateCount();
+            output.classList.remove('visible');
+            copyBtn.style.display = 'none';
+        });
+
+        copyBtn.addEventListener('click', async () => {
+            try {
+                await navigator.clipboard.writeText(output.textContent);
+                const originalText = copyBtn.textContent;
+                copyBtn.textContent = 'Copied!';
+                setTimeout(() => {
+                    copyBtn.textContent = originalText;
+                }, 1500);
+            } catch (err) {
+                console.error('Failed to copy:', err);
+            }
+        });
+
+        // Fetch and populate locations on page load
+        async function loadLocations() {
+            try {
+                const response = await fetch('/locations');
+                const locations = await response.json();
+                
+                spaceName.innerHTML = '';
+                
+                if (locations.length === 0) {
+                    spaceName.innerHTML = '<option value="">No locations available</option>';
+                    return;
+                }
+                
+                locations.forEach(location => {
+                    const option = document.createElement('option');
+                    option.value = location;
+                    option.textContent = location;
+                    spaceName.appendChild(option);
+                });
+            } catch (err) {
+                console.error('Failed to load locations:', err);
+                spaceName.innerHTML = '<option value="">Error loading locations</option>';
+            }
+        }
+
+        loadLocations();
+    </script>
+</body>
+</html>
